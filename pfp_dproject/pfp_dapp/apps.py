@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class PfpAppConfig(AppConfig):
-    name = 'pfp_app'
+    name = 'pfp_dapp'
