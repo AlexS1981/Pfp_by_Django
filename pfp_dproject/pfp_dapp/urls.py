@@ -1,5 +1,7 @@
 from django.conf.urls import url
-from pfp_dapp.views import CityAddressAPI, UrlDataLoadAPI
+
+
+from pfp_dapp.views import CityAddressAPI, UrlDataLoadAPI, EmergencyAPI
 
 urlpatterns = [
     # Отключение возможности загрузки через API
@@ -7,5 +9,6 @@ urlpatterns = [
     # url(r'load-dep/', UrlDataLoadAPI.as_view()),
 
     # Пустой параметр "all_data" возвращает все адреса
-    url(r'adress/', CityAddressAPI.as_view())
+    url(r'address/', CityAddressAPI.as_view()),
+    url(r'emergency/', EmergencyAPI.as_view())
 ]

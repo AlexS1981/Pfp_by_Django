@@ -1,15 +1,12 @@
 
 # Create your views here.
-from io import BytesIO
-
 from rest_framework.exceptions import ValidationError
-from rest_framework.parsers import JSONParser
-from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from pfp_dapp.models import CityAddress
-from pfp_dapp.serializers import UrlDataLoadSerializer, CityAddressSerializerGet, CityAddressSerializerPost
+from pfp_dapp.models import CityAddress, Emergency
+from pfp_dapp.serializers import UrlDataLoadSerializer, CityAddressSerializerGet, CityAddressSerializerPost, \
+    EmergencySerializerGet, EmergencySerializerPost, EmergencySerializerPostAll
 
 
 class UrlDataLoadAPI(APIView):
@@ -45,16 +42,43 @@ class CityAddressAPI(APIView):
             serialiser = CityAddressSerializerGet(data=request.GET)
             serialiser.is_valid(raise_exception=True)
             instance = serialiser.validate(attr=request.GET)
-            return Response(instance)
+            return Response([CityAddressSerializerPost(i).data for i in instance])
         else:
             raise ValidationError(detail="Parameters was not correct.")
 
-    # def post(self, request):
-    #     serializer = CityAddressSerializer(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-    #     instance = serializer.save()
-    #     # instance = CityAdress.objects.create(**request.data)
-    #     return Response(CityAddressSerializer(instance).data)
+    def post(self, request):
+        serializer = CityAddressSerializerPost(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        return Response(CityAddressSerializerPost(instance).data)
 
 
+class EmergencyAPI(APIView):
 
+    def get(self, request):
+        serializer = EmergencySerializerGet(data=request.GET)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.validate(request.GET)
+        return Response([CityAddressSerializerPost(i).data for i in instance])
+
+    def post(self, request):
+        serializer = EmergencySerializerPost(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        res = CityAddress.objects \
+            .filter(ca_address=request.data.get('em_address'),
+                    ca_house_number=request.data.get('em_house_number'))
+        for i in res:
+            em_dict = i.__dict__
+            em_dict.pop('_state')
+            em_dict.pop('id')
+            em_dict['em_address'] = em_dict.pop('ca_address')
+            em_dict['em_house_number'] = em_dict.pop('ca_house_number')
+            em_dict['em_type'] = request.data.get('em_address')
+            em_dict['em_stores'] = em_dict.pop('ca_stores')
+            em_dict['em_latitude'] = em_dict.pop('ca_latitude')
+            em_dict['em_longitude'] = em_dict.pop('ca_longitude')
+            print(em_dict)
+        serializer_all = EmergencySerializerPostAll(data=em_dict)
+        serializer_all.is_valid(raise_exception=True)
+        instance = serializer_all.save()
+        return Response(EmergencySerializerPost(instance).data)

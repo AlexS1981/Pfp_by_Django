@@ -3,11 +3,11 @@ import json
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from pfp_dapp.models import CityAddress, DepartamentAddress
+from pfp_dapp.models import CityAddress, DepartamentAddress, Emergency
 
 
 class UrlDataLoadSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
+
     request_path = serializers.CharField(max_length=500)
 
     def create(self, validated_data):
@@ -79,7 +79,7 @@ class UrlDataLoadSerializer(serializers.Serializer):
 
 
 class LoadCityAddressSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
+
     ca_address = serializers.CharField(max_length=150)
     ca_house_number = serializers.IntegerField(min_value=1, max_value=999)
     ca_stores = serializers.IntegerField(min_value=0, max_value=99)
@@ -91,7 +91,7 @@ class LoadCityAddressSerializer(serializers.Serializer):
 
 
 class LoadDepartamentSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
+
     dep_address = serializers.CharField(max_length=150)
     dep_house_number = serializers.IntegerField(min_value=1, max_value=999)
     dep_latitude = serializers.FloatField(min_value=0, max_value=360)
@@ -106,20 +106,8 @@ class LoadDepartamentSerializer(serializers.Serializer):
         return DepartamentAddress.objects.create(**validated_data)
 
 
-class CityAddressSerializerPost(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-    ca_address = serializers.CharField(max_length=150)
-    ca_house_number = serializers.IntegerField(min_value=1, max_value=999)
-    ca_stores = serializers.IntegerField(min_value=0, max_value=99)
-    ca_latitude = serializers.FloatField(min_value=0, max_value=360)
-    ca_longitude = serializers.FloatField(min_value=0, max_value=360)
-
-    def create(self, validated_data):
-        return CityAddress.objects.create(**validated_data)
-
-
 class CityAddressSerializerGet(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
+
     ca_address = serializers.CharField(max_length=150)
     ca_house_number = serializers.IntegerField(min_value=1, max_value=999)
 
@@ -130,24 +118,90 @@ class CityAddressSerializerGet(serializers.Serializer):
         if res.exists():
             list_res = list()
             for i in res:
-                list_res.append(i)
-            dict_res = {"id": list_res[0].id,
-                        "ca_address": list_res[0].ca_address,
-                        "ca_house_number": list_res[0].ca_house_number,
-                        "ca_stores": list_res[0].ca_stores,
-                        "ca_latitude": list_res[0].ca_latitude,
-                        "ca_longitude": list_res[0].ca_longitude}
-            return [dict_res]
+                list_res.append(i.__dict__)
+            return list_res
         else:
             raise ValidationError(detail="Object was not found.")
+
+
+class CityAddressSerializerPost(serializers.Serializer):
+
+    ca_address = serializers.CharField(max_length=150)
+    ca_house_number = serializers.IntegerField(min_value=1, max_value=999)
+    ca_stores = serializers.IntegerField(min_value=0, max_value=99)
+    ca_latitude = serializers.FloatField(min_value=0, max_value=360)
+    ca_longitude = serializers.FloatField(min_value=0, max_value=360)
+
+    def create(self, validated_data):
+        return CityAddress.objects.create(**validated_data)
+
+    def validate(self, attr):
+        res = CityAddress.objects\
+                .filter(ca_address=attr.get('ca_address'),
+                        ca_house_number=attr.get('ca_house_number'))
+        if res.exists():
+            raise ValidationError(detail="This address already exist.")
+        else:
+            return attr
+
+
+class EmergencySerializerGet(serializers.Serializer):
+
+    em_address = serializers.CharField(max_length=150)
+    em_house_number = serializers.IntegerField(min_value=1, max_value=999)
+    em_type = serializers.CharField(max_length=40)
+
+    # def validate(self, attr):
+    #     em_t = str()
+    #     for i in Emergency.var_type:
+    #         if i == attr.get('em_type'):
+    #             em_t = i
+    #         else:
+    #             raise ValidationError(detail="Type is not correct.")
+    #     res = CityAddress.objects \
+    #         .filter(ca_address=attr.get('ca_address'),
+    #                 ca_house_number=attr.get('ca_house_number'))
+    #     if res.exists() and em_t != '':
+    #         list_res = list()
+    #         for i in res:
+    #             list_res.append(i.__dict__)
+    #         return list_res
+    #     else:
+    #         raise ValidationError(detail="Object was not found.")
+
+
+class EmergencySerializerPost(serializers.Serializer):
+
+    em_address = serializers.CharField(max_length=150)
+    em_house_number = serializers.IntegerField(min_value=1, max_value=999)
+    em_type = serializers.CharField(max_length=40)
+
+    def validate(self, attrs):
+        try:
+            Emergency.var_type.index(attrs.get('em_type'))
+        except ValueError:
+            raise ValidationError(detail='Type is not correct.')
+        res = CityAddress.objects \
+            .filter(ca_address=attrs.get('em_address'),
+                    ca_house_number=attrs.get('em_house_number'))
+        if res.exists():
+            return attrs
+        else:
+            raise ValidationError(detail="Object was not found.")
+
+
+class EmergencySerializerPostAll(serializers.Serializer):
+
+    em_address = serializers.CharField(max_length=150)
+    em_house_number = serializers.IntegerField(min_value=1, max_value=999)
+    em_type = serializers.CharField(max_length=40)
+    em_stores = serializers.CharField(max_length=2)
+    em_latitude = serializers.CharField(max_length=30)
+    em_longitude = serializers.CharField(max_length=30)
+
+    def create(self, validated_data):
+        return Emergency.objects.create(**validated_data)
 
     # def update(self, instance, validated_data):
     #     CityAddress.objects.filter(pk=instance.id).update(**validated_data)
     #     return CityAddress.objects.get(pk=instance.pk)
-
-
-class DepartamentAddressSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-    dep_address = serializers.CharField(max_length=150)
-    dep_latitude = serializers.FloatField(min_value=0, max_value=360)
-    dep_longitude = serializers.FloatField(min_value=0, max_value=360)
